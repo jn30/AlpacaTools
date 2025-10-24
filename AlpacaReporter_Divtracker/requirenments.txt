@@ -1,0 +1,3 @@
+pip install pandas requests pyqt5 reportlab flask flask-cors
+
+
