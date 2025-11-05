@@ -31,8 +31,8 @@ IGNORED_TRADES_FILE = "ignored_trades.json"
 TRADES_CACHE_FILE = "trades_cache.json"
 
 COLUMNS = [
-    "Week", "Start", "Div/W", "Gross", "WHT", "Net", "DRIP", "Total",
-    "Price", "Value", "Avg/Week", "Year", "Return", "Edit"
+    "KW", "Start", "Div/W", "Brutto", "WHT", "Netto", "DRIP", "Gesamt",
+    "Preis", "Wert", "Ø/Woche", "Jahr", "Rendite", "Edit"
 ]
 EDITABLE_COLS = [0, 2]
 CALCULATED_COLS = [1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
@@ -132,7 +132,7 @@ def get_activities_by_type(key, secret, activity_type, use_paper=True, after=Non
     
     while True:
         page_count += 1
-        print(f"  [{activity_type}] Page {page_count}...")
+        print(f"  [{activity_type}] Seite {page_count}...")
         
         try:
             r = requests.get(endpoint, headers=headers, params=params, timeout=30)
@@ -140,14 +140,14 @@ def get_activities_by_type(key, secret, activity_type, use_paper=True, after=Non
             data = r.json()
             
             if not data or len(data) == 0:
-                print(f"  [{activity_type}] → No more data")
+                print(f"  [{activity_type}] → Keine weiteren Daten")
                 break
             
             all_activities.extend(data)
-            print(f"  [{activity_type}] → {len(data)} entries ({len(all_activities)} total)")
+            print(f"  [{activity_type}] → {len(data)} Einträge ({len(all_activities)} gesamt)")
             
             if len(data) < 100:
-                print(f"  [{activity_type}] → Last page reached")
+                print(f"  [{activity_type}] → Letzte Seite erreicht")
                 break
             
             last_date = data[-1].get("date") or data[-1].get("transaction_time")
@@ -157,35 +157,35 @@ def get_activities_by_type(key, secret, activity_type, use_paper=True, after=Non
                 break
                 
         except requests.exceptions.RequestException as e:
-            print(f"  [{activity_type}] → Error: {e}")
+            print(f"  [{activity_type}] → Fehler: {e}")
             break
     
     return all_activities
 
 def get_all_activities_complete(key, secret, use_paper=True, after=None, until=None):
     print("\n" + "="*60)
-    print("STARTING COMPLETE ACTIVITY QUERY")
+    print("STARTE KOMPLETTE AKTIVITÄTS-ABFRAGE")
     print("="*60)
     
     all_activities = []
     
-    print("\n1. Loading Trades (FILL)...")
+    print("\n1. Lade Trades (FILL)...")
     fills = get_activities_by_type(key, secret, "FILL", use_paper, after, until)
     all_activities.extend(fills)
-    print(f"✓ {len(fills)} trades loaded")
+    print(f"✓ {len(fills)} Trades geladen")
     
-    print("\n2. Loading Dividends (DIV)...")
+    print("\n2. Lade Dividenden (DIV)...")
     divs = get_activities_by_type(key, secret, "DIV", use_paper, after, until)
     all_activities.extend(divs)
-    print(f"✓ {len(divs)} dividends loaded")
+    print(f"✓ {len(divs)} Dividenden geladen")
     
-    print("\n3. Loading Withholding Taxes (DIVNRA)...")
+    print("\n3. Lade Quellensteuern (DIVNRA)...")
     divnra = get_activities_by_type(key, secret, "DIVNRA", use_paper, after, until)
     all_activities.extend(divnra)
-    print(f"✓ {len(divnra)} withholding taxes loaded")
+    print(f"✓ {len(divnra)} Quellensteuern geladen")
     
     print(f"\n{'='*60}")
-    print(f"TOTAL: {len(all_activities)} activities")
+    print(f"GESAMT: {len(all_activities)} Aktivitäten")
     print(f"{'='*60}\n")
     
     return all_activities
@@ -198,12 +198,12 @@ class TradeEditorDialog(QDialog):
         self.trades_list = trades_list
         self.ignored_trades = load_ignored_trades()
         
-        self.setWindowTitle(f"Edit Trades - {sym} Week {kw}")
+        self.setWindowTitle(f"Trades bearbeiten - {sym} KW{kw}")
         self.setGeometry(200, 200, 600, 400)
         
         layout = QVBoxLayout()
         
-        title = QLabel(f"<b>Trades for {sym} Week {kw}</b><br>Check to ignore:")
+        title = QLabel(f"<b>Trades für {sym} KW{kw}</b><br>Abhaken um zu ignorieren:")
         title.setFont(QFont("Arial", 11, QFont.Bold))
         layout.addWidget(title)
         
@@ -221,7 +221,7 @@ class TradeEditorDialog(QDialog):
             
             is_ignored = self.ignored_trades.get(order_id, False)
             
-            checkbox = QCheckBox(f"Ignore: {qty} Shares @ ${price}")
+            checkbox = QCheckBox(f"Ignorieren: {qty} Shares @ ${price}")
             checkbox.setChecked(is_ignored)
             
             content_layout.addWidget(checkbox)
@@ -234,7 +234,7 @@ class TradeEditorDialog(QDialog):
         buttons = QHBoxLayout()
         ok_btn = QPushButton("OK")
         ok_btn.clicked.connect(self.accept)
-        cancel_btn = QPushButton("Cancel")
+        cancel_btn = QPushButton("Abbrechen")
         cancel_btn.clicked.connect(self.reject)
         buttons.addWidget(ok_btn)
         buttons.addWidget(cancel_btn)
@@ -277,7 +277,7 @@ class DivTracker(QMainWindow):
         layout = QVBoxLayout(central)
 
         header = QHBoxLayout()
-        header.addWidget(QLabel("ETF Selection:"))
+        header.addWidget(QLabel("ETF-Auswahl:"))
         
         self.etf_selector = QComboBox()
         self.etf_selector.addItems(sorted(self.states.keys()))
@@ -287,15 +287,15 @@ class DivTracker(QMainWindow):
         self.etf_selector.currentTextChanged.connect(self.on_etf_changed)
         header.addWidget(self.etf_selector)
 
-        btn_add = QPushButton("+ Add ETF")
+        btn_add = QPushButton("+ ETF hinzufügen")
         btn_add.clicked.connect(self.add_etf)
         header.addWidget(btn_add)
 
-        btn_del = QPushButton("Delete ETF")
+        btn_del = QPushButton("ETF löschen")
         btn_del.clicked.connect(self.remove_etf)
         header.addWidget(btn_del)
 
-        btn_sync = QPushButton("Alpaca Sync: Update All Trackers")
+        btn_sync = QPushButton("Alpaca Sync: Alle Tracker aktualisieren")
         btn_sync.clicked.connect(self.alpaca_sync_all)
         header.addWidget(btn_sync)
 
@@ -329,22 +329,22 @@ class DivTracker(QMainWindow):
         layout.addLayout(header)
 
         buttons = QHBoxLayout()
-        btn_week = QPushButton("+ Add Week")
+        btn_week = QPushButton("+ Woche hinzufügen")
         btn_week.clicked.connect(self.add_week)
         btn_week.setStyleSheet("background:#28a745;color:white;padding:10px;font-weight:bold;")
         buttons.addWidget(btn_week)
 
-        btn_csv = QPushButton("📊 Export as CSV")
+        btn_csv = QPushButton("📊 Als CSV exportieren")
         btn_csv.clicked.connect(self.export_csv)
         btn_csv.setStyleSheet("background:#28a745;color:white;padding:10px;font-weight:bold;")
         buttons.addWidget(btn_csv)
 
-        btn_pdf = QPushButton("📄 Export as PDF")
+        btn_pdf = QPushButton("📄 Als PDF exportieren")
         btn_pdf.clicked.connect(self.export_pdf)
         btn_pdf.setStyleSheet("background:#007bff;color:white;padding:10px;font-weight:bold;")
         buttons.addWidget(btn_pdf)
 
-        btn_reset = QPushButton("🔄 Reset")
+        btn_reset = QPushButton("🔄 Zurücksetzen")
         btn_reset.clicked.connect(self.reset)
         btn_reset.setStyleSheet("background:#dc3545;color:white;padding:10px;font-weight:bold;")
         buttons.addWidget(btn_reset)
@@ -363,14 +363,14 @@ class DivTracker(QMainWindow):
         self.table.itemChanged.connect(self.on_cell_changed)
         layout.addWidget(self.table)
 
-        self.status_label = QLabel("Status: Ready")
+        self.status_label = QLabel("Status: Bereit")
         self.statusBar().addPermanentWidget(self.status_label)
 
     def add_etf(self):
-        name, ok = QInputDialog.getText(self, "Add ETF", "Name/Ticker of new ETF:")
+        name, ok = QInputDialog.getText(self, "ETF hinzufügen", "Name/Ticker des neuen ETFs:")
         if ok and name.strip():
             if name in self.states:
-                QMessageBox.warning(self, "Error", "This name already exists.")
+                QMessageBox.warning(self, "Fehler", "Dieser Name existiert bereits.")
                 return
             self.states[name] = {"invest": 0.00, "rows": []}
             self.etf_selector.clear()
@@ -381,9 +381,9 @@ class DivTracker(QMainWindow):
     def remove_etf(self):
         name = self.etf_selector.currentText()
         if len(self.states) == 1:
-            QMessageBox.warning(self, "Notice", "At least one ETF must remain.")
+            QMessageBox.warning(self, "Hinweis", "Mindestens ein ETF muss bestehen bleiben.")
             return
-        if QMessageBox.question(self, "Delete", f"Really delete '{name}'?",
+        if QMessageBox.question(self, "Löschen", f"'{name}' wirklich löschen?",
                                 QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.states.pop(name, None)
             self.etf_selector.clear()
@@ -398,7 +398,7 @@ class DivTracker(QMainWindow):
         self.current_etf = etf
         save_last_viewed_etf(etf)
         self.refresh_from_state()
-        self.status_label.setText(f"Status: ETF '{etf}' loaded")
+        self.status_label.setText(f"Status: ETF '{etf}' geladen")
 
     def refresh_from_state(self):
         self.block_signals = True
@@ -449,7 +449,7 @@ class DivTracker(QMainWindow):
     def open_trade_editor(self, row):
         kw = self.table.item(row, 0).text() if self.table.item(row, 0) else None
         if not kw or self.current_etf not in self.trades_cache or kw not in self.trades_cache[self.current_etf]:
-            QMessageBox.information(self, "Info", "No trades available for this week.")
+            QMessageBox.information(self, "Info", "Keine Trades für diese Woche verfügbar.")
             return
         
         trades = self.trades_cache[self.current_etf][kw]
@@ -521,18 +521,18 @@ class DivTracker(QMainWindow):
         secret, ok = QInputDialog.getText(self, "API Secret", "Alpaca Secret:", text=cfg.get("secret", ""))
         if not ok:
             return
-        mode, ok = QInputDialog.getItem(self, "Mode", "Select API mode:", 
+        mode, ok = QInputDialog.getItem(self, "Modus", "API-Modus auswählen:", 
                                         ["Live", "Paper"], 0, False)
         if ok:
             cfg.update({"key": key, "secret": secret, "mode": mode.lower()})
             save_alpaca_config(cfg)
-            QMessageBox.information(self, "Saved", f"API data ({mode}) saved successfully")
+            QMessageBox.information(self, "Gespeichert", f"API-Daten ({mode}) erfolgreich gespeichert")
 
     def alpaca_sync_all(self):
         cfg = load_alpaca_config()
         key, secret, mode = cfg.get("key"), cfg.get("secret"), cfg.get("mode", "live")
         if not key or not secret:
-            QMessageBox.warning(self, "Error", "Please enter Alpaca API data first")
+            QMessageBox.warning(self, "Fehler", "Bitte zuerst Alpaca-API-Daten eingeben")
             return
         
         use_paper = mode == "paper"
@@ -549,7 +549,7 @@ class DivTracker(QMainWindow):
             acts = get_all_activities_complete(key, secret, use_paper, after=None, until=until)
             
             positions = get_alpaca_positions(key, secret, use_paper)
-            print(f"✓ {len(positions)} positions retrieved\n")
+            print(f"✓ {len(positions)} Positionen abgerufen\n")
 
             symbols_with_divs = set()
             for a in acts:
@@ -558,11 +558,11 @@ class DivTracker(QMainWindow):
                     if sym:
                         symbols_with_divs.add(sym)
             
-            print(f"✓ {len(symbols_with_divs)} symbols with dividends found\n")
+            print(f"✓ {len(symbols_with_divs)} Symbole mit Dividenden gefunden\n")
 
             for sym in list(self.states.keys()):
                 if sym not in symbols_with_divs:
-                    print(f"⊗ {sym}: No dividends → removing")
+                    print(f"⊗ {sym}: Keine Dividenden → wird entfernt")
                     self.states.pop(sym, None)
 
             for sym in symbols_with_divs:
@@ -574,6 +574,8 @@ class DivTracker(QMainWindow):
                 "div_tax": 0.0,
                 "buy_total_cost": 0.0,
                 "buy_total_qty": 0.0,
+                "sell_total_cost": 0.0,
+                "sell_total_qty": 0.0,
                 "trades": []
             }))
             
@@ -596,18 +598,18 @@ class DivTracker(QMainWindow):
                 y, w, _ = dt.isocalendar()
                 kw = f"{w:02d}/{y}"
 
-                if typ == "FILL" and a.get("side") == "buy":
+                if typ == "FILL":
+                    side = a.get("side")
                     trade_type = a.get("type", "").lower().strip()
                     if trade_type not in ["fill", "partial_fill"]:
                         continue
 
                     order_id = a.get("id", f"{sym}_{kw}")
 
-                    # Filter duplicate order_ids
                     if order_id in seen_order_ids:
-                        print(f"  [DUPLICATE] {order_id} - skipped")
+                        print(f"  [DUPLICATE] {order_id} - übersprungen")
                         continue
-
+                    
                     seen_order_ids.add(order_id)
 
                     if ignored_trades.get(order_id, False):
@@ -620,13 +622,19 @@ class DivTracker(QMainWindow):
 
                     price = float(a.get("price", 0))
                     cost = qty * price
-                    grouped[sym][kw]["buy_total_cost"] += cost
-                    grouped[sym][kw]["buy_total_qty"] += qty
-                    grouped[sym][kw]["trades"].append({
-                        "order_id": order_id,
-                        "qty": qty,
-                        "price": price
-                    })
+
+                    if side == "buy":
+                        grouped[sym][kw]["buy_total_cost"] += cost
+                        grouped[sym][kw]["buy_total_qty"] += qty
+                        grouped[sym][kw]["trades"].append({
+                            "order_id": order_id,
+                            "qty": qty,
+                            "price": price
+                        })
+                    elif side == "sell":
+                        grouped[sym][kw]["sell_total_cost"] += cost
+                        grouped[sym][kw]["sell_total_qty"] += qty
+
                     
                 elif typ == "DIV":
                     gross_amt = float(a.get("net_amount", a.get("amount", 0)))
@@ -641,7 +649,7 @@ class DivTracker(QMainWindow):
 
             for sym, weeks in grouped.items():
                 print(f"\n{'='*60}")
-                print(f"Processing {sym}: {len(weeks)} weeks")
+                print(f"Verarbeite {sym}: {len(weeks)} Wochen")
                 print(f"{'='*60}")
                 
                 rows = []
@@ -658,6 +666,8 @@ class DivTracker(QMainWindow):
                         "div_tax": 0.0,
                         "buy_total_cost": 0.0,
                         "buy_total_qty": 0.0,
+                        "sell_total_cost": 0.0,
+                        "sell_total_qty": 0.0,
                         "trades": []
                     }
                 
@@ -665,11 +675,11 @@ class DivTracker(QMainWindow):
                                     key=lambda k: (int(k.split("/")[1]), int(k.split("/")[0])))
                 
                 # Load existing rows for Div/W protection
-                existing_rows = {r["Week"]: r for r in self.states.get(sym, {}).get("rows", [])}
+                existing_rows = {r["KW"]: r for r in self.states.get(sym, {}).get("rows", [])}
                 
                 
-                print(f"Weeks: {', '.join(sorted_weeks)}")
-                print(f"Current week: {current_kw}\n")
+                print(f"Wochen: {', '.join(sorted_weeks)}")
+                print(f"Aktuelle Woche: {current_kw}\n")
                 
                 total_invested = 0.0
                 cumulative_shares = 0
@@ -679,7 +689,7 @@ class DivTracker(QMainWindow):
                 for kw in sorted_weeks:
                     vals = weeks[kw]
                     row = {c: "" for c in COLUMNS}
-                    row["Week"] = kw
+                    row["KW"] = kw
                     
                     if sym not in self.trades_cache:
                         self.trades_cache[sym] = {}
@@ -693,17 +703,19 @@ class DivTracker(QMainWindow):
                     net_div = gross_div - wht_div
                     buy_cost = vals["buy_total_cost"]
                     buy_qty = vals["buy_total_qty"]
+                    sell_cost = vals["sell_total_cost"]
+                    sell_qty = vals["sell_total_qty"]
                     
-                    row["Gross"] = f"${gross_div:,.2f}"
+                    row["Brutto"] = f"${gross_div:,.2f}"
                     row["WHT"] = f"${wht_div:,.2f}"
-                    row["Net"] = f"${net_div:,.2f}"
+                    row["Netto"] = f"${net_div:,.2f}"
                     
-                    print(f"{kw}: DIV=${gross_div:.2f}, DIVNRA=${wht_div:.2f}, Net=${net_div:.2f}")
+                    print(f"{kw}: DIV=${gross_div:.2f}, DIVNRA=${wht_div:.2f}, Netto=${net_div:.2f}")
                     
                     # Div/W PROTECTION: Check if manually set
                     if kw in existing_rows and existing_rows[kw].get("Div/W", "").strip():
                         row["Div/W"] = existing_rows[kw]["Div/W"]
-                        print(f"{kw}: Div/W manually set → keeping: {row['Div/W']}")
+                        print(f"{kw}: Div/W manuell gesetzt → behalten: {row['Div/W']}")
                     else:
                         if start_shares_this_week > 0:
                             rate_per_week = gross_div / start_shares_this_week
@@ -715,62 +727,68 @@ class DivTracker(QMainWindow):
                     if buy_qty > 0:
                         cumulative_shares += int(buy_qty)
                         avg_buy_price = buy_cost / buy_qty
-                        row["Price"] = f"{avg_buy_price:.2f}"
-                        print(f"{kw}: Buy +{int(buy_qty)} @ ${avg_buy_price:.2f} → {cumulative_shares}")
+                        row["Preis"] = f"{avg_buy_price:.2f}"
+                        print(f"{kw}: Kauf +{int(buy_qty)} @ ${avg_buy_price:.2f} → {cumulative_shares}")
                         
                         if net_div >= buy_cost:
                             drip_shares = int(net_div / avg_buy_price)
-                            print(f"{kw}: DRIP detected! ${net_div:.2f} Div >= ${buy_cost:.2f} Purchase")
+                            print(f"{kw}: DRIP erkannt! ${net_div:.2f} Div >= ${buy_cost:.2f} Kauf")
                             row["DRIP"] = str(drip_shares)
                         else:
                             net_investment = buy_cost - net_div
                             total_invested += net_investment
-                            print(f"{kw}: Invest +${net_investment:.2f} (Purchases: ${buy_cost:.2f}, Div: ${net_div:.2f})")
+                            print(f"{kw}: Invest +${net_investment:.2f} (Käufe: ${buy_cost:.2f}, Div: ${net_div:.2f})")
                             row["DRIP"] = "0"
                     else:
                         if current_price > 0:
-                            row["Price"] = f"{current_price:.2f}"
+                            row["Preis"] = f"{current_price:.2f}"
                         row["DRIP"] = "0"
+
+                    if sell_qty > 0:
+                        total_invested -= sell_cost
+                        cumulative_shares = 0
+                        print(f"{kw}: Verkauf von {int(sell_qty)} Aktien. Bestand auf 0 gesetzt.")
+                        print(f"{kw}: Investition um ${sell_cost:.2f} reduziert.")
                     
-                    row["Total"] = str(cumulative_shares)
+                    row["Gesamt"] = str(cumulative_shares)
 
                     # Calculate value
                     if current_price > 0:
                         wert = cumulative_shares * current_price
-                        row["Value"] = f"${wert:,.2f}"
+                        row["Wert"] = f"${wert:,.2f}"
                     else:
-                        row["Value"] = "$0.00"
+                        row["Wert"] = "$0.00"
 
                     # Cumulative dividends
                     cumulative_div_total += net_div
                     week_count += 1
 
-                    # Avg/Week
+                    # Ø/Woche
                     if week_count > 0:
                         avg_per_week = cumulative_div_total / week_count
-                        row["Avg/Week"] = f"${avg_per_week:.2f}"
+                        row["Ø/Woche"] = f"${avg_per_week:.2f}"
                     else:
-                        row["Avg/Week"] = "$0.00"
+                        row["Ø/Woche"] = "$0.00"
 
-                    # Year (52 weeks projected)
+                    # Jahr (52 weeks projected)
                     if week_count > 0:
                         yearly = (cumulative_div_total / week_count) * 52
-                        row["Year"] = f"${yearly:,.2f}"
+                        row["Jahr"] = f"${yearly:,.2f}"
                     else:
-                        row["Year"] = "$0.00"
+                        row["Jahr"] = "$0.00"
 
-                    # Return
+                    # Rendite
                     rendite = cumulative_div_total - total_invested
                     if rendite < 0:
-                        row["Return"] = f"$-{abs(rendite):,.2f}"
+                        row["Rendite"] = f"$-{abs(rendite):,.2f}"
                     else:
-                        row["Return"] = f"${rendite:,.2f}"
+                        row["Rendite"] = f"${rendite:,.2f}"
 
                     row["Edit"] = "Edit"
 
                     rows.append(row)
                 
-                print(f"\n✓ {len(rows)} rows, ${total_invested:.2f}, {cumulative_shares} shares\n")
+                print(f"\n✓ {len(rows)} Zeilen, ${total_invested:.2f}, {cumulative_shares} Shares\n")
                 
                 self.states[sym]["invest"] = round(total_invested, 2)
                 self.states[sym]["rows"] = rows
@@ -798,12 +816,12 @@ class DivTracker(QMainWindow):
             self.etf_selector.blockSignals(False)
             self.refresh_from_state()
             
-            QMessageBox.information(self, "Sync Successful", 
-                f"✓ {len(acts)} activities synchronized\n"
-                f"✓ {len(self.states)} ETFs updated")
+            QMessageBox.information(self, "Sync erfolgreich", 
+                f"✓ {len(acts)} Aktivitäten synchronisiert\n"
+                f"✓ {len(self.states)} ETFs aktualisiert")
             
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"{str(e)}\n\n{traceback.format_exc()}")
+            QMessageBox.critical(self, "Fehler", f"{str(e)}\n\n{traceback.format_exc()}")
 
     def add_week(self):
         self.block_signals = True
@@ -847,7 +865,7 @@ class DivTracker(QMainWindow):
 
     def export_csv(self):
         fname, _ = QFileDialog.getSaveFileName(
-            self, "Export CSV",
+            self, "CSV exportieren",
             f"{self.current_etf}_divtracker-{datetime.now():%Y-%m-%d}.csv",
             "CSV Files (*.csv)"
         )
@@ -855,11 +873,11 @@ class DivTracker(QMainWindow):
             data = [[self.table.item(r, c).text() if self.table.item(r, c) else ""
                      for c in range(len(COLUMNS)-1)] for r in range(self.table.rowCount())]
             pd.DataFrame(data, columns=COLUMNS[:-1]).to_csv(fname, index=False, encoding="utf-8-sig")
-            QMessageBox.information(self, "Success", f"CSV exported:\n{fname}")
+            QMessageBox.information(self, "Erfolg", f"CSV exportiert:\n{fname}")
 
     def export_pdf(self):
         fname, _ = QFileDialog.getSaveFileName(
-            self, "Export PDF",
+            self, "PDF exportieren",
             f"{self.current_etf}_divtracker-{datetime.now():%Y-%m-%d}.pdf",
             "PDF Files (*.pdf)"
         )
@@ -887,11 +905,11 @@ class DivTracker(QMainWindow):
         ]))
         elems.append(tbl)
         doc.build(elems)
-        QMessageBox.information(self, "Success", f"PDF exported:\n{fname}")
+        QMessageBox.information(self, "Erfolg", f"PDF exportiert:\n{fname}")
 
     def reset(self):
-        if QMessageBox.question(self, "Reset",
-            f"Really delete '{self.current_etf}'?",
+        if QMessageBox.question(self, "Zurücksetzen",
+            f"'{self.current_etf}' wirklich löschen?",
             QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.invest_input.setText("0.00")
             self.create_empty_row()
@@ -899,35 +917,35 @@ class DivTracker(QMainWindow):
 
     def show_portfolio_overview(self):
         """Display portfolio overview with total investment and returns"""
-        total_invest = 0.0
-        total_value = 0.0
-        dividend_payback = 0.0
+        gesamtinvest = 0.0
+        gesamtwert = 0.0
+        rueckzahlung_invest = 0.0
         
         for sym in self.states:
-            total_invest += self.states[sym]["invest"]
+            gesamtinvest += self.states[sym]["invest"]
             if self.states[sym]["rows"]:
                 try:
                     # Get current market value from last row
-                    value_str = self.states[sym]["rows"][-1].get("Value", "$0.00").replace(",", "").replace("$", "")
-                    total_value += float(value_str)
+                    wert_str = self.states[sym]["rows"][-1].get("Wert", "$0.00").replace(",", "").replace("$", "")
+                    gesamtwert += float(wert_str)
                     
-                    # Get "Return" (dividend payback) from last row
-                    return_str = self.states[sym]["rows"][-1].get("Return", "$0.00").replace(",", "").replace("$", "")
-                    dividend_payback += float(return_str)
+                    # Get "Rendite" (return from dividends) from last row
+                    rendite_str = self.states[sym]["rows"][-1].get("Rendite", "$0.00").replace(",", "").replace("$", "")
+                    rueckzahlung_invest += float(rendite_str)
                 except Exception:
                     pass
         
         # Total return = Market value - Investment
-        total_return = total_value - total_invest
+        gesamtrendite = gesamtwert - gesamtinvest
         
         msg = (
-            f"Portfolio Overview\n\n"
-            f"Total Investment (all ETFs): ${total_invest:,.2f}\n"
-            f"Current Market Value: ${total_value:,.2f}\n"
-            f"Total Return (Value - Investment): ${total_return:,.2f}\n"
-            f"Dividend Payback: ${dividend_payback:,.2f}"
+            f"Portfolioübersicht\n\n"
+            f"Gesamtinvestition aller ETFs: ${gesamtinvest:,.2f}\n"
+            f"Aktueller Marktwert: ${gesamtwert:,.2f}\n"
+            f"Gesamtrendite (Wert - Invest): ${gesamtrendite:,.2f}\n"
+            f"Rückzahlung Invest (Dividenden): ${rueckzahlung_invest:,.2f}"
         )
-        QMessageBox.information(self, "Portfolio Overview", msg)
+        QMessageBox.information(self, "Portfolio Übersicht", msg)
 
 
 if __name__ == "__main__":
