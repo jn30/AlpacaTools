@@ -1,3 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+AlpacaDashboardServer.exe filter=lfs diff=lfs merge=lfs -text
+*.exe filter=lfs diff=lfs merge=lfs -text
+*.pkg filter=lfs diff=lfs merge=lfs -text
 server/build/run_server/run_server.pkg filter=lfs diff=lfs merge=lfs -text
